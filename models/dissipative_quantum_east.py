@@ -44,14 +44,15 @@ class master_operator(master_operators.lindbladian):
 		self._generate_matrix_representation()
 
 	def _constraint_operator(self):
-		delta = math.sqrt((self.temperature + self.decay_rate)**2 + 4*self.field**2)
+		delta = math.sqrt((self.temperature + self.decay_rate)**2 + 16*self.field**2)
 		projection = 0.5*np.array(
 			[[1 + (self.temperature + self.decay_rate)/delta, 
-			  (2j*self.omega)/delta],
-			 [(-2j*self.omega)/delta, 
+			  (4j*self.field)/delta],
+			 [(-4j*self.field)/delta, 
 			  1 - (self.temperature + self.decay_rate)/delta]])
 		self.constraint_operator = (self.hardness*projection 
 									+ (1 - self.hardness)*np.eye(2, dtype = complex))
+		print(self.constraint_operator)
 
 	def _hamiltonian(self):
 		sigma_x = su2.pauli('x')
@@ -61,7 +62,7 @@ class master_operator(master_operators.lindbladian):
 		for site in range(1, self.sites + 1):
 			local_sigma_x = local_operator(sigma_x, site, self.sites)
 			local_constraint = local_operator(
-				self.constraint_operator, (site % (self.sites + 1)) + 1, self.sites)
+				self.constraint_operator, (site % self.sites) + 1, self.sites)
 			self.hamiltonian += local_sigma_x @ local_constraint @ local_constraint
 		self.hamiltonian *= self.field
 
@@ -73,7 +74,7 @@ class master_operator(master_operators.lindbladian):
 		sigma_plus = su2.pauli('+')
 		for site in range(1, self.sites + 1):
 			local_constraint = local_operator(
-				self.constraint_operator, (site % (self.sites + 1)) + 1, self.sites)
+				self.constraint_operator, (site % self.sites) + 1, self.sites)
 			self.jump_operators.append(sqrt_decay * (
 				local_operator(sigma_minus, site, self.sites) @ local_constraint))
 			self.jump_operators.append(sqrt_temperature * (
@@ -84,12 +85,8 @@ class master_operator(master_operators.lindbladian):
 		self._hamiltonian()
 		self._jump_operators()
 
-	def update_parameters(
-			self, 
-			decay_rate = None,
-			field = None,
-			temperature = None,
-			hardness = None):
+	def update_parameters(self, decay_rate = None, field = None, temperature = None,
+						  hardness = None):
 		if decay_rate != None:
 			self.decay_rate = decay_rate
 		if field != None:

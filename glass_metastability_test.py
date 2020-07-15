@@ -8,6 +8,7 @@ import metastability
 source_path = os.path.join("models/")
 sys.path.insert(0,source_path)
 import OpenQuantumMetastabilityMethods as kcqg
+import dissipative_quantum_east as dqe
 from scipy import linalg
 
 Sites = 3
@@ -19,11 +20,20 @@ TempStep = 1
 Hardness = 0.999
 eMSNumber = Sites + 1
 
+sites = Sites
+decay_rate = DecayRate
+field = FieldRange[0]
+temperature = TempRange[0]
+hardness = Hardness
+model = dqe.master_operator(sites, decay_rate, field, temperature, hardness)
+print(sorted(linalg.eigvals(model.matrix_representation))[-1:-6:-1])
+
 print("Start")
 current_time = time.time()
 Evals, LeftEvecs, RightEvecs, BlockIndicies, FieldVals, TemperatureVals, ExtendedEvals = kcqg.GlassMasterOpSpectrumVs_FieldPlusTemperatureEvecs(
 	DecayRate, FieldRange, FieldStep, TempRange, TempStep, Hardness, Sites, eMSNumber,
 	ExtendEvals = True, Extension = 1)
+print(Evals)
 current_time = time.time() - current_time
 print("Diagonalization time: %s"%(current_time))
 

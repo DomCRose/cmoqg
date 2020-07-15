@@ -874,6 +874,7 @@ def KCQG_SoftConstraint(DecayRate, Field, Temperature, p):
 def KCQG_Hamiltonian1D(DecayRate, Field, p, Sites, Temperature = 0):
 	SigmaX = np.array([[0.0,1.0],[1.0,0.0]])
 	KinConstraint = KCQG_SoftConstraint(DecayRate, Field, Temperature, p)
+	print(KinConstraint)
 	Hamiltonian = np.dot(CompositeOperator(SigmaX, 1, Sites),np.dot(CompositeOperator(KinConstraint, 2, Sites),CompositeOperator(KinConstraint, 2, Sites)))
 	for index in range(1, Sites-1):
 		Hamiltonian += np.dot(CompositeOperator(SigmaX, index+1, Sites),np.dot(CompositeOperator(KinConstraint, index+2, Sites),CompositeOperator(KinConstraint, index+2, Sites)))
