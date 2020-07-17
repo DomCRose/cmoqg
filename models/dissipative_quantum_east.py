@@ -52,7 +52,6 @@ class master_operator(master_operators.lindbladian):
 			  1 - (self.temperature + self.decay_rate)/delta]])
 		self.constraint_operator = (self.hardness*projection 
 									+ (1 - self.hardness)*np.eye(2, dtype = complex))
-		print(self.constraint_operator)
 
 	def _hamiltonian(self):
 		sigma_x = su2.pauli('x')
@@ -99,7 +98,8 @@ class master_operator(master_operators.lindbladian):
 		self._generate_matrix_representation()
 		
 
-class symmetrized_master_operator(master_operator):
+class symmetrized_master_operator(master_operators.weakly_symmetric_lindbladian,
+								  master_operator):
 
 	def __init__(
 			self,
@@ -113,19 +113,24 @@ class symmetrized_master_operator(master_operator):
 		self.field = field
 		self.temperature = temperature
 		self.hardness = hardness
-		self._constraint_operator()
-		self._hamiltonian()
-		self._jump_operators()
+		self.hilbert_space_dimension = 2**sites
+		self._operators()
+		self._blocks()
 		self._generate_matrix_representation()
 
-	def _constraint_operator(self):
+	def _blocks(self):
 		pass
 
-	def _hamiltonian(self):
-		pass
-
-	def _jump_operators(self):
-		pass
-
-	def update_parameters(self, parameters):
-		pass
+	def update_parameters(self, decay_rate = None, field = None, temperature = None,
+						  hardness = None):
+		if decay_rate != None:
+			self.decay_rate = decay_rate
+		if field != None:
+			self.field = field
+		if temperature != None:
+			self.temperature = temperature
+		if hardness != None:
+			self.hardness = hardness
+		self._operators()
+		self._blocks()
+		self._generate_matrix_representation()
