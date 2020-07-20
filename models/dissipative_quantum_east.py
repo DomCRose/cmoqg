@@ -115,11 +115,23 @@ class symmetrized_master_operator(master_operators.weakly_symmetric_lindbladian,
 		self.hardness = hardness
 		self.hilbert_space_dimension = 2**sites
 		self._operators()
+		self.jump_number = len(self.jump_operators)
+		self.spin_rep = cyclic_representations.spin_representation(self.sites)
 		self._blocks()
 		self._generate_matrix_representation()
 
 	def _blocks(self):
-		pass
+		self.hamiltonian = self.spin_rep.block_diagonalize(self.hamiltonian)
+		jump_blocks = []
+		for new_index in range(self.jump_number):
+			jump_operator = self.jump_operators[0]
+			for jump_index in range(1, self.jump_number):
+				jump_operator += np.exp(complex(2*np.pi*jump_index*new_index*1j)
+										/ self.jump_number)*self.jump_operators[jump_index]
+			jump_operator /= np.sqrt(self.jump_number)
+			jump_blocks.append(self.spin_rep.block_diagonalize(jump_operator, new_index))
+		self.jump_operators = jump_blocks
+
 
 	def update_parameters(self, decay_rate = None, field = None, temperature = None,
 						  hardness = None):

@@ -75,6 +75,11 @@ class spin_representation(object):
 			adjoint_eigenspaces.append(eigenspace)
 		return adjoint_eigenspaces
 
-	def block_diagonalize(self, operator, diagonal):
+	def block_diagonalize(self, operator, diagonal = 0):
 		"""Produces blocks of operator along specified diagonal."""
-		pass
+		blocks = []
+		for space_index in range(self.sites):
+			dual_space_index = (space_index + diagonal) % self.sites
+			blocks.append((self.projectors[space_index] @ operator @ 
+						   @ np.conjugate(self.projectors[dual_space_index]).T))
+		return blocks
