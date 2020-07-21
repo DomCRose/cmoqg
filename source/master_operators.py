@@ -139,8 +139,11 @@ class weakly_symmetric_lindbladian(object):
 			self.hamiltonian[0], np.eye(self.eigenspace_dimensions[pair_index]))
 		hamiltonian_term += 1j * np.kron(
 			np.eye(self.eigenspace_dimensions[pair_index]), self.hamiltonian[0].T)
+		print(hamiltonian_term.shape)
 		for symmetry_index in range(1, self.eigenspace_number):
 			pair_index = self.eigenspace_pairs[block_index][symmetry_index]
+			print(self.hamiltonian[symmetry_index].shape)
+			print(np.eye(self.eigenspace_dimensions[pair_index]).shape)
 			hamiltonian_term += -1j * np.kron(
 				self.hamiltonian[symmetry_index], 
 				np.eye(self.eigenspace_dimensions[pair_index]))
@@ -199,6 +202,7 @@ class weakly_symmetric_lindbladian(object):
 		self.matrix_representation = []
 		for block_index in range(self.eigenspace_number):
 			pair_index = self.eigenspace_pairs[block_index][0]
+			print(pair_index)
 			block_dimension = (self.eigenspace_dimensions[0] 
 							   * self.eigenspace_dimensions[pair_index])
 			self.matrix_representation.append(np.zeros((block_dimension, block_dimension),

@@ -115,22 +115,30 @@ class symmetrized_master_operator(master_operators.weakly_symmetric_lindbladian,
 		self.hardness = hardness
 		self.hilbert_space_dimension = 2**sites
 		self._operators()
-		self.jump_number = len(self.jump_operators)
+		self.jumps = len(self.jump_operators)
 		self.spin_rep = cyclic_representations.spin_representation(self.sites)
 		self._blocks()
 		self._generate_matrix_representation()
 
 	def _blocks(self):
-		self.hamiltonian = self.spin_rep.block_diagonalize(self.hamiltonian)
+		self.hamiltonian = self.spin_rep.block_diagonalize(self.hamiltonian, 0)
 		jump_blocks = []
-		for new_index in range(self.jump_number):
+		for new_index in range(self.jumps):
 			jump_operator = self.jump_operators[0]
-			for jump_index in range(1, self.jump_number):
+			for jump_index in range(1, self.jumps):
 				jump_operator += np.exp(complex(2*np.pi*jump_index*new_index*1j)
-										/ self.jump_number)*self.jump_operators[jump_index]
-			jump_operator /= np.sqrt(self.jump_number)
+										/ self.jumps)*self.jump_operators[jump_index]
+			jump_operator /= np.sqrt(self.jumps)
 			jump_blocks.append(self.spin_rep.block_diagonalize(jump_operator, new_index))
 		self.jump_operators = jump_blocks
+		self.spin_rep.eigenspace_pairs()
+		self.eigenspace_pairs = self.spin_rep.adjoint_eigenspace_pairs
+		print(self.eigenspace_pairs)
+		self.eigenspace_dimensions = self.spin_rep.eigenspace_dimensions
+		print(self.eigenspace_dimensions)
+		self.eigenspace_number = len(self.eigenspace_dimensions)
+		print(self.hamiltonian)
+		print(self.jump_operators)
 
 
 	def update_parameters(self, decay_rate = None, field = None, temperature = None,

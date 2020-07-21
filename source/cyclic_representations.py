@@ -6,7 +6,7 @@ class spin_representation(object):
 
 	def __init__(self, sites):
 		self.sites = sites
-		self._state_eigenspaces
+		self._state_eigenspaces()
 
 	def _left_translation(self, number):
 		"""Cycles the bits of a number left, wrapping at sites."""
@@ -53,24 +53,19 @@ class spin_representation(object):
 			self.projectors.append(np.array(eigenspace))
 			self.eigenspace_dimensions.append(len(eigenspace))
 
+	def eigenspace_pairs(self):
+		"""Lists pairs of eigenspaces for each adjoint eigenspace."""
+		self.adjoint_eigenspace_pairs = [[(j-i) % self.sites for j in range(self.sites)] 
+										 for i in range(self.sites)]
+
 	def adjoint_eigenspaces(self):
 		"""Constructs eigenspaces of the translation superoperator."""
-		adjoint_eigenvalues = [[i-j for j in range(self.sites)] 
-							   for i in range(self.sites)]
-		adjoint_eigenspace_pairs = []
-		for block_index in range(-self.sites+1, self.sites):
-			eigenspace_pairs = []
-			for row_index in range(self.sites):
-				for column_index in range(self.sites):
-					if adjoint_eigenvalues[row_index][column_index] == block_index:
-						eigenspace_pairs.append((row_index, column_index))
-			adjoint_eigenspace_pairs.append(eigenspace_pairs)
 		adjoint_eigenspaces = []
-		for eigenspace_pairs in adjoint_eigenspace_pairs:
+		for eigenspace_pairs in self.adjoint_eigenspace_pairs:
 			eigenspace = []
-			for pair in eigenspace_pairs:
-				for state in self.projectors[pair[0]]:
-					for conjugate_state in self.projectors[pair[1]]:
+			for pair in range(len(eigenspace_pairs)):
+				for state in self.projectors[pair]:
+					for conjugate_state in self.projectors[eigenspace_pairs[pair]]:
 						eigenspace.append(np.outer(state, np.conjugate(conjugate_state)))
 			adjoint_eigenspaces.append(eigenspace)
 		return adjoint_eigenspaces
@@ -80,6 +75,6 @@ class spin_representation(object):
 		blocks = []
 		for space_index in range(self.sites):
 			dual_space_index = (space_index + diagonal) % self.sites
-			blocks.append((self.projectors[space_index] @ operator @ 
+			blocks.append((self.projectors[space_index] @ operator 
 						   @ np.conjugate(self.projectors[dual_space_index]).T))
 		return blocks

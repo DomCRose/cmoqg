@@ -11,7 +11,7 @@ import OpenQuantumMetastabilityMethods as kcqg
 import dissipative_quantum_east as dqe
 from scipy import linalg
 
-Sites = 6
+Sites = 3
 DecayRate = 1
 FieldRange = [0.1,0.1]
 FieldStep = 1
@@ -28,9 +28,18 @@ hardness = Hardness
 print("Start new")
 current_time = time.time()
 model = dqe.master_operator(sites, decay_rate, field, temperature, hardness)
-print(sorted(linalg.eigvals(model.matrix_representation))[-1:-8:-1])
+print(sorted(linalg.eigvals(model.matrix_representation))[-1:-5:-1])
 current_time = time.time() - current_time
 print("New diagonalization time: %s"%(current_time))
+
+print("Start symmetrized")
+current_time = time.time()
+model2 = dqe.symmetrized_master_operator(sites, decay_rate, field, temperature, hardness)
+print(sorted(linalg.eigvals(model2.matrix_representation[0]))[-1:-5:-1])
+print(sorted(linalg.eigvals(model2.matrix_representation[1]))[-1:-5:-1])
+print(sorted(linalg.eigvals(model2.matrix_representation[2]))[-1:-5:-1])
+current_time = time.time() - current_time
+print("Symmetrized diagonalization time: %s"%(current_time))
 
 print("Start")
 current_time = time.time()
