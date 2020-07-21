@@ -4,6 +4,9 @@ import itertools
 import numpy as np
 import random_linear_algebra as rla
 
+def hermitian_basis(left_eigenmatrices, right_eigenmatrices):
+	pass
+
 def simplex_vertices(left_eigenmatrices, mode = 'random', rotations = 3, 
 					 threshold = 0.05, right_eigenmatrices = None, 
 					 symmetry_transformation = None, power_for_identity = None):
@@ -68,7 +71,6 @@ def _maximal_volume_simplex(candidate_vertices, number_of_vertices):
 		if combination_volume > current_volume:
 			current_vertices = combination
 			current_volume = combination_volume
-	print(current_volume)
 	return np.concatenate((current_vertices, np.ones((number_of_vertices, 1))), axis = 1)
 
 def _simplex_vertices_random(left_eigenmatrices, rotations, threshold):

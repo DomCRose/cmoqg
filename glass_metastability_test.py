@@ -28,11 +28,12 @@ hardness = Hardness
 print("Start new")
 current_time = time.time()
 model = dqe.master_operator(sites, decay_rate, field, temperature, hardness)
+print(model.spectrum(3))
 print(sorted(linalg.eigvals(model.matrix_representation))[-1:-5:-1])
 current_time = time.time() - current_time
 print("New diagonalization time: %s"%(current_time))
 
-print("Start symmetrized")
+"""print("Start symmetrized")
 current_time = time.time()
 model2 = dqe.symmetrized_master_operator(sites, decay_rate, field, temperature, hardness)
 print(sorted(linalg.eigvals(model2.matrix_representation[0]))[-1:-5:-1])
@@ -40,7 +41,7 @@ print(sorted(linalg.eigvals(model2.matrix_representation[1]))[-1:-5:-1])
 print(sorted(linalg.eigvals(model2.matrix_representation[2]))[-1:-5:-1])
 current_time = time.time() - current_time
 print("Symmetrized diagonalization time: %s"%(current_time))
-
+"""
 print("Start")
 current_time = time.time()
 Evals, LeftEvecs, RightEvecs, BlockIndicies, FieldVals, TemperatureVals, ExtendedEvals = kcqg.GlassMasterOpSpectrumVs_FieldPlusTemperatureEvecs(
@@ -52,7 +53,7 @@ print("Diagonalization time: %s"%(current_time))
 
 LeftEmats, RightEmats = kcqg.KCQG_EigenvectorBasistoHermitianMatrixBasis2DParameterSpace(
 	Evals, LeftEvecs, RightEvecs, BlockIndicies, Sites)
-
+	
 current_time = time.time()
 simplex_vertices = metastability.simplex_vertices(LeftEmats[0][0],
 												  rotations = 3)
