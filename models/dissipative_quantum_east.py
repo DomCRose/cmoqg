@@ -41,7 +41,6 @@ class master_operator(master_operators.lindbladian):
 		self.temperature = temperature
 		self.hardness = hardness
 		self.hilbert_space_dimension = 2**sites
-		self.density_space_dimension = self.hilbert_space_dimension**2
 		self._operators()
 		self._generate_matrix_representation()
 
@@ -98,38 +97,6 @@ class master_operator(master_operators.lindbladian):
 			self.hardness = hardness
 		self._operators()
 		self._generate_matrix_representation()
-
-	def spectrum(self, return_number = None, extra_eigenvalues = 0, rounding = 10):
-		if return_number == None:
-			return_number = self.density_space_dimension + 1
-		eigenvalues, left_eigenvectors, right_eigenvectors = scipy.linalg.eig(
-			self.matrix_representation, left = True)
-		sorting_index = eigenvalues.argsort()[::-1]
-		eigenvalues = np.around(eigenvalues[sorting_index], rounding)
-		left_eigenmatrices = np.reshape(
-			left_eigenvectors[:, sorting_index].T, 
-			(self.density_space_dimension, 
-			 self.hilbert_space_dimension, 
-			 self.hilbert_space_dimension))
-		right_eigenmatrices = np.reshape(
-			right_eigenvectors[:, sorting_index].T, 
-			(self.density_space_dimension, 
-			 self.hilbert_space_dimension, 
-			 self.hilbert_space_dimension))
-		right_eigenmatrices[0] = right_eigenmatrices[0] / np.trace(right_eigenmatrices[0])
-		left_eigenmatrices = np.einsum(
-			"ijk,i->ijk",
-			left_eigenmatrices, 
-			1/np.einsum("ikj,ikj->i", 
-						np.conjugate(left_eigenmatrices), 
-						right_eigenmatrices))
-		left_eigenmatrices = np.around(left_eigenmatrices, rounding)
-		right_eigenmatrices = np.around(right_eigenmatrices, rounding)
-		return (eigenvalues[0 : return_number + extra_eigenvalues], 
-				left_eigenmatrices[0 : return_number], 
-				right_eigenmatrices[0 : return_number])
-
-		
 		
 
 class symmetrized_master_operator(master_operators.weakly_symmetric_lindbladian,

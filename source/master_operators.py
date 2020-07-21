@@ -1,6 +1,7 @@
 import sys
 import os
 import numpy as np
+import scipy.linalg
 
 class lindbladian(object):
 
@@ -74,6 +75,36 @@ class lindbladian(object):
 											  dtype = complex)
 		self.matrix_representation += self._hamiltonian_term()
 		self.matrix_representation += self._jump_term()
+
+	def spectrum(self, return_number = None, extra_eigenvalues = 0, rounding = 10):
+		if return_number == None:
+			return_number = self.hilbert_space_dimension**2 + 1
+		eigenvalues, left_eigenvectors, right_eigenvectors = scipy.linalg.eig(
+			self.matrix_representation, left = True)
+		sorting_index = eigenvalues.argsort()[::-1]
+		eigenvalues = np.around(eigenvalues[sorting_index], rounding)
+		left_eigenmatrices = np.reshape(
+			left_eigenvectors[:, sorting_index].T, 
+			(self.hilbert_space_dimension**2, 
+			 self.hilbert_space_dimension, 
+			 self.hilbert_space_dimension))
+		right_eigenmatrices = np.reshape(
+			right_eigenvectors[:, sorting_index].T, 
+			(self.hilbert_space_dimension**2, 
+			 self.hilbert_space_dimension, 
+			 self.hilbert_space_dimension))
+		right_eigenmatrices[0] = right_eigenmatrices[0] / np.trace(right_eigenmatrices[0])
+		left_eigenmatrices = np.einsum(
+			"ijk,i->ijk",
+			left_eigenmatrices, 
+			1/np.einsum("ikj,ikj->i", 
+						np.conjugate(left_eigenmatrices), 
+						right_eigenmatrices))
+		left_eigenmatrices = np.around(left_eigenmatrices, rounding)
+		right_eigenmatrices = np.around(right_eigenmatrices, rounding)
+		return (eigenvalues[0 : return_number + extra_eigenvalues], 
+				left_eigenmatrices[0 : return_number], 
+				right_eigenmatrices[0 : return_number])
 
 class weakly_symmetric_lindbladian(object):
 

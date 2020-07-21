@@ -3,21 +3,26 @@ from scipy import linalg
 
 class jump_trajectory_generator(object):
 
-	def __init__(self, lindbladian):
+	def __init__(self, lindbladian, smallest_time, evolver_number):
 		self.model = lindbladian
+		self.smallest_time = smallest_time
+		self.evolver_number = evolver_number
+		self._effective_hamiltonian()
+		self._binary_evolution_operators()
 
-	def EffectiveHamiltonian(Hamiltonian, LindbladOps):
-		EffectiveHam = np.array(Hamiltonian)
-		for Op in LindbladOps:
-			EffectiveHam = EffectiveHam - 0.5j * np.dot(np.array(Op).conjugate().T, np.array(Op))
-		return EffectiveHam
+	def _effective_hamiltonian(self):
+		"""The non-hermitian generator for evolution between jumps."""
+		self.effective_hamiltonian = np.array(self.model.hamiltonian)
+		for jump in self.model.jump_operators:
+			self.effective_hamiltonian -= 0.5j * jump.conjugate().T @ jump
 
-	def BinaryEvolvers(EffectiveHamiltonian, SmallestTime, NumberOfEvolvers):
-		SmallestEvolver = linalg.expm(-1j*SmallestTime*EffectiveHamiltonian)
-		Evolvers = [SmallestEvolver]
-		for i in range(NumberOfEvolvers-1):
-			Evolvers.append(np.dot(Evolvers[-1],Evolvers[-1]))
-		return Evolvers[::-1]
+	def _binary_evolution_operators(self):
+		"""Evolution operators for the binary search of jump times."""
+		smallest_evolver = linalg.expm(-1j*self.smallest_time*self.effective_hamiltonian)
+		evolvers = [smallest_evolver]
+		for i in range(self.evolver_number-1):
+			evolvers.append(evolvers[-1] @ evolvers[-1])
+		return evolvers[::-1]
 
 	def EvolverCombination(SmallestStepMultiple, Steps):
 		Combination = []
@@ -129,7 +134,7 @@ class jump_trajectory_generator(object):
 
 	def Expectation(State, Observable):
 		return np.dot(np.conjugate(State).T,np.dot(Observable,State))
-		
+
 	def StochasticAverage(LindbladOperators, UnnormedState, OutputNumber, OutputSmallestStepMultiple, 
 		Evolvers, Samples, ObservationFunction, *ObservationFunctionArgs):
 		Results = np.array(TrajectoryAmplitudesBinary(LindbladOperators, UnnormedState, OutputNumber, OutputSmallestStepMultiple, 
