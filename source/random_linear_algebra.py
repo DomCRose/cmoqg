@@ -1,18 +1,18 @@
 import numpy as np
 import scipy.linalg
 
-def random_real_vector(dimension):
+def random_real_vector(dimension, number = 1):
 	"""Uniformly generates a normalized real vector."""
-	random_unnormalized_real_vector = np.random.randn(dimension)
-	return (random_unnormalized_real_vector
-			/ float(np.linalg.norm(random_unnormalized_real_vector)))
+	random_unnormalized_real_vectors = np.random.randn(number, dimension)
+	norms = np.linalg.norm(random_unnormalized_real_vectors, axis = 1)
+	return random_unnormalized_real_vectors / norms[:,np.newaxis]
 
-def random_complex_vector(dimension):
+def random_complex_vector(dimension, number = 1):
 	"""Uniformly generates a normalized complex vector."""
-	random_unnormalized_complex_vector = (random_real_vector(dimension)
-										  + 1j*random_real_vector(dimension))
-	return (random_unnormalized_complex_vector
-			/ float(np.linalg.norm(random_unnormalized_complex_vector)))
+	random_unnormalized_complex_vectors = (random_real_vector(dimension, number)
+										  + 1j*random_real_vector(dimension, number))
+	norms = np.linalg.norm(random_unnormalized_complex_vectors, axis = 1)
+	return random_unnormalized_complex_vectors / norms[:,np.newaxis]
 
 def random_orthogonal_matrix(dimension, mode = 'uniform', variance = 0.001):
 	"""Generates an orthogonal matrix.

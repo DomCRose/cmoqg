@@ -3,6 +3,10 @@ from scipy import linalg
 
 class jump_trajectory_generator(object):
 
+	"""Generates quantum jump trajectories using a binary search.
+
+	"""
+
 	def __init__(self, lindbladian, smallest_time, evolver_number):
 		self.model = lindbladian
 		self.smallest_time = smallest_time
@@ -24,7 +28,7 @@ class jump_trajectory_generator(object):
 			evolvers.append(evolvers[-1] @ evolvers[-1])
 		return evolvers[::-1]
 
-	def EvolverCombination(SmallestStepMultiple, Steps):
+	def _evolver_combination(SmallestStepMultiple, Steps):
 		Combination = []
 		for Step in Steps:
 			Combination.append(int(SmallestStepMultiple/Step))
@@ -34,7 +38,7 @@ class jump_trajectory_generator(object):
 				break
 		return Combination
 
-	def TrajectoryJumpBinarySearch(PreviousUnnormedState, Evolvers, EvolverInd, 
+	def _jump_search(PreviousUnnormedState, Evolvers, EvolverInd, 
 		CurrentSteps, Steps, RandomProbability):
 		CurrentUnnormedState = np.dot(Evolvers[EvolverInd+1], PreviousUnnormedState)
 		Probability = linalg.norm(CurrentUnnormedState)**2
@@ -55,7 +59,7 @@ class jump_trajectory_generator(object):
 			#CurrentUnnormedState = np.dot(Evolvers[-1], PreviousUnnormedState)
 			return PreviousUnnormedState, CurrentSteps
 
-	def TrajectoryJump(LindbladOperators, State):
+	def _jump(LindbladOperators, State):
 		#print(State)
 		UnnormedJumpStates = [np.dot(np.array(Op), State) for Op in LindbladOperators]
 		UnnormedProbabilities = np.array([linalg.norm(UnnormedJumpState)**2 for UnnormedJumpState in UnnormedJumpStates])
@@ -67,7 +71,7 @@ class jump_trajectory_generator(object):
 		PostJumpState = UnnormedJumpStates[Jump]/linalg.norm(UnnormedJumpStates[Jump])
 		return PostJumpState
 
-	def TrajectoryBinaryStepEvolution(LindbladOperators, PreviousUnnormedState, CurrentUnnormedState, 
+	def _binary_evolution_step(LindbladOperators, PreviousUnnormedState, CurrentUnnormedState, 
 		Probability, EvolverIndex, Evolvers, Evolutions, CurrentSteps, Steps, RndmProbability):
 		for Step in range(Evolutions):
 			#print(Step)
@@ -75,9 +79,9 @@ class jump_trajectory_generator(object):
 			#print(RndmProbability)
 			#print(Probability)
 			if Probability <= RndmProbability:
-				EvolvedState, CurrentSteps = TrajectoryJumpBinarySearch(PreviousUnnormedState, 
+				EvolvedState, CurrentSteps = self._jump_search(PreviousUnnormedState, 
 					Evolvers, EvolverIndex, CurrentSteps, Steps, RndmProbability)
-				JumpedState = TrajectoryJump(LindbladOperators, EvolvedState)
+				JumpedState = self._jump(LindbladOperators, EvolvedState)
 				RndmProbability = np.random.random()
 				#print("Jump")
 				#print(RndmProbability)
@@ -88,12 +92,12 @@ class jump_trajectory_generator(object):
 			Probability = linalg.norm(CurrentUnnormedState)**2
 		return CurrentUnnormedState, CurrentSteps, RndmProbability, False
 
-	def TrajectoryBinaryEvolution(LindbladOperators, PreviousUnnormedState, Evolvers, RandomProbability, 
+	def _binary_evolution(LindbladOperators, PreviousUnnormedState, Evolvers, RandomProbability, 
 		SmallestStepMultiple):
 		EvolverNumber = len(Evolvers)
 		Steps = [2**(EvolverNumber-1-i) for i in range(EvolverNumber)]
 		CurrentSteps = 0
-		Combination = EvolverCombination(SmallestStepMultiple, Steps)
+		Combination = self._evolver_combination(SmallestStepMultiple, Steps)
 		#print(Combination)
 		for EvolverIndex in range(EvolverNumber):
 			if Combination[EvolverIndex] >= 1:
@@ -102,7 +106,7 @@ class jump_trajectory_generator(object):
 				#print(CurrentUnnormedState)
 				Probability = linalg.norm(CurrentUnnormedState)**2
 				#print(Probability)
-				CurrentUnnormedState, CurrentSteps, RandomProbability, JumpOccured = TrajectoryBinaryStepEvolution(
+				CurrentUnnormedState, CurrentSteps, RandomProbability, JumpOccured = self._binary_evolution_step(
 					LindbladOperators, PreviousUnnormedState, CurrentUnnormedState, Probability, EvolverIndex, 
 					Evolvers, Combination[EvolverIndex]-1, CurrentSteps, Steps, RandomProbability)
 			if JumpOccured:
@@ -114,33 +118,33 @@ class jump_trajectory_generator(object):
 				#print("Rand")
 				#print(RandomProbability)
 				#print(CurrentUnnormedState)
-				CurrentUnnormedState, RandomProbability = TrajectoryBinaryEvolution(LindbladOperators, CurrentUnnormedState, 
+				CurrentUnnormedState, RandomProbability = self._binary_evolution(LindbladOperators, CurrentUnnormedState, 
 					Evolvers, RandomProbability, SmallestStepMultiple-CurrentSteps)
 				break
 			PreviousUnnormedState = np.array(CurrentUnnormedState)
 		return CurrentUnnormedState, RandomProbability
 
-	def TrajectoryAmplitudesBinary(LindbladOperators, UnnormedState, OutputNumber, OutputSmallestStepMultiple, 
+	def trajectory(LindbladOperators, UnnormedState, OutputNumber, OutputSmallestStepMultiple, 
 		Evolvers, ObservationFunction, *ObservationFunctionArgs):
 		TimeDependentAmplitude = [UnnormedState]
 		RandomProbability = np.random.random()
 		Results = [ObservationFunction(UnnormedState, *ObservationFunctionArgs)]
 		for i in range(OutputNumber):
 			print(i)
-			UnnormedState, RandomProbability = TrajectoryBinaryEvolution(LindbladOperators, UnnormedState, Evolvers, 
+			UnnormedState, RandomProbability = self._binary_evolution(LindbladOperators, UnnormedState, Evolvers, 
 				RandomProbability, OutputSmallestStepMultiple)
 			Results.append(ObservationFunction(UnnormedState/linalg.norm(UnnormedState), *ObservationFunctionArgs))
 		return Results
 
-	def Expectation(State, Observable):
+	def expectation(State, Observable):
 		return np.dot(np.conjugate(State).T,np.dot(Observable,State))
 
-	def StochasticAverage(LindbladOperators, UnnormedState, OutputNumber, OutputSmallestStepMultiple, 
+	def stochastic_average(LindbladOperators, UnnormedState, OutputNumber, OutputSmallestStepMultiple, 
 		Evolvers, Samples, ObservationFunction, *ObservationFunctionArgs):
-		Results = np.array(TrajectoryAmplitudesBinary(LindbladOperators, UnnormedState, OutputNumber, OutputSmallestStepMultiple, 
+		Results = np.array(self.trajectory(LindbladOperators, UnnormedState, OutputNumber, OutputSmallestStepMultiple, 
 		Evolvers, ObservationFunction, *ObservationFunctionArgs))
 		for i in range(Samples-1):
 			print(i)
-			Results += np.array(TrajectoryAmplitudesBinary(LindbladOperators, UnnormedState, OutputNumber, OutputSmallestStepMultiple, 
+			Results += np.array(self.trajectory(LindbladOperators, UnnormedState, OutputNumber, OutputSmallestStepMultiple, 
 		Evolvers, ObservationFunction, *ObservationFunctionArgs))
 		return Results/Samples
