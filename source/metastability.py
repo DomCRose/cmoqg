@@ -96,16 +96,13 @@ def _divisors(number):
 								   [int(np.sqrt(number))]))
 	else:
 		possible_divisors = np.arange(1, int(np.sqrt(number)) + 1)
-		print(possible_divisors)
 		lower_divisors = possible_divisors[np.mod(number, possible_divisors) == 0]
-		print(lower_divisors)
 		divisors = np.concatenate((lower_divisors, number/lower_divisors))
 	return sorted(divisors)
 
 def _invariant_sets(vectors, threshold, transformation, power_for_identity):
 	"""Groups vectors according to their transformations."""
 	set_lengths = _divisors(power_for_identity)
-	print(set_lengths)
 	invariant_sets = [[] for i in range(len(set_lengths))]
 	set_length_counts = np.zeros(len(set_lengths))
 	vectors = list(vectors)
@@ -204,7 +201,6 @@ def _maximal_volume_combination(candidate_groups, set_length_counts,
 		current_volume, current_vertices = _combination_volumes(
 			combination, candidate_groups, set_length_counts, set_lengths,
 			current_volume, current_vertices)
-	print(current_volume)
 	return np.concatenate((current_vertices, np.ones((number_of_vertices, 1))), axis = 1)
 
 
