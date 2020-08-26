@@ -5,10 +5,24 @@ import scipy
 import numpy as np
 source_path = os.path.join(os.pardir, "source/")
 sys.path.insert(0, source_path)
-import special_unitary_groups as su2
 import cyclic_representations
 import master_operators
 from scipy import linalg
+
+def pauli(label):
+	if label == 'z':
+		return np.array([[1.0, 0.0], [0.0, -1.0]])
+	elif label == 'x':
+		return np.array([[0.0, 1.0], [1.0, 0.0]])
+	elif label == '-':
+		return np.array([[0.0, 0.0], [1.0, 0.0]])
+	elif label == '+':
+		return np.array([[0.0, 1.0], [0.0, 0.0]])
+	elif label == 'y':
+		return np.array([[0.0, -1.0j], [1.0j, 0.0]])
+	else:
+		raise ValueError("label must be either 'x', 'y', 'z', '+' or '-'. "
+						 "label given was {}".format(label))
 
 def local_operator(operator, index, sites):
 	identity = np.eye(len(operator))
@@ -25,6 +39,18 @@ def local_operator(operator, index, sites):
 			output = np.kron(output, identity)
 	return output
 
+def spatial_average(operator, sites):
+	observable = np.zeros((2**sites, 2**sites), dtype = complex)
+	for site in range(1, sites + 1):
+		observable += local_operator(operator, site, sites)
+	return observable/sites
+
+def local_operators(operator, sites):
+	observables = []
+	for site in range(1, sites + 1):
+		observables.append(local_operator(operator, site, sites))
+	return np.array(observables)
+
 
 class master_operator(master_operators.lindbladian):
 
@@ -34,7 +60,8 @@ class master_operator(master_operators.lindbladian):
 			decay_rate,
 			field,
 			temperature,
-			hardness):
+			hardness,
+			generate_matrix = True):
 		self.sites = sites
 		self.decay_rate = decay_rate
 		self.field = field
@@ -42,7 +69,8 @@ class master_operator(master_operators.lindbladian):
 		self.hardness = hardness
 		self.hilbert_space_dimension = 2**sites
 		self._operators()
-		self._generate_matrix_representation()
+		if generate_matrix:
+			self._generate_matrix_representation()
 
 	def _constraint_operator(self):
 		delta = math.sqrt((self.temperature + self.decay_rate)**2 + 16*self.field**2)
@@ -55,7 +83,7 @@ class master_operator(master_operators.lindbladian):
 									+ (1 - self.hardness)*np.eye(2, dtype = complex))
 
 	def _hamiltonian(self):
-		sigma_x = su2.pauli('x')
+		sigma_x = pauli('x')
 		self.hamiltonian = np.zeros((self.hilbert_space_dimension,
 									 self.hilbert_space_dimension), 
 									dtype = complex)
@@ -70,8 +98,8 @@ class master_operator(master_operators.lindbladian):
 		self.jump_operators = []
 		sqrt_decay = math.sqrt(self.decay_rate)
 		sqrt_temperature = math.sqrt(self.temperature)
-		sigma_minus = su2.pauli('-')
-		sigma_plus = su2.pauli('+')
+		sigma_minus = pauli('-')
+		sigma_plus = pauli('+')
 		for site in range(1, self.sites + 1):
 			local_constraint = local_operator(
 				self.constraint_operator, (site % self.sites) + 1, self.sites)
@@ -84,6 +112,9 @@ class master_operator(master_operators.lindbladian):
 		self._constraint_operator()
 		self._hamiltonian()
 		self._jump_operators()
+
+	def generate_matrix_representation(self):
+		self._generate_matrix_representation()
 
 	def update_parameters(self, decay_rate = None, field = None, temperature = None,
 						  hardness = None):
