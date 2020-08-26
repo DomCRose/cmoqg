@@ -18,7 +18,7 @@ class jump_trajectory_generator(object):
 		"""The non-hermitian generator for evolution between jumps."""
 		self.effective_hamiltonian = np.array(self.model.hamiltonian)
 		for jump in self.model.jump_operators:
-			self.effective_hamiltonian -= 0.5j * jump.conjugate().T @ jump
+			self.effective_hamiltonian -= 0.5j * np.conjugate(jump).T @ jump
 
 	def _binary_evolution_operators(self):
 		"""Evolution operators for the binary search of jump times."""
@@ -55,10 +55,7 @@ class jump_trajectory_generator(object):
 			probability = linalg.norm(self.current_state)**2
 		if probability > self.random:
 			self.current_steps += self.evolver_steps[-1]
-			#self.current_state = np.dot(Evolvers[-1], self.current_state)
 		else:
-			#self.current_steps += self.evolver_steps[-1]
-			#self.current_state = np.dot(Evolvers[-1], self.previous_state)
 			self.current_state = self.previous_state
 
 	def _jump(self):
@@ -102,14 +99,17 @@ class jump_trajectory_generator(object):
 	def trajectory(self, state, observation_number, steps_per_observation, 
 				   observation, *observation_args):
 		self.current_state = state
+		self.previous_state = state
 		self.random = np.random.random()
 		results = [observation(self.current_state, *observation_args)]
 		for i in range(observation_number):
-			print(i)
+			if i % int(observation_number / 10) == 0:
+				print("Progress: " + str(int(i*100/observation_number)) + "%")
 			self._binary_evolution(steps_per_observation)
 			results.append(observation(self.current_state/linalg.norm(self.current_state),
 									   *observation_args))
-		return results
+		print("Progress: 100%")
+		return np.array(results)
 
 	def stochastic_average(self, state, observation_number, steps_per_observation, 
 						   samples, observation, *observation_args):
@@ -117,7 +117,7 @@ class jump_trajectory_generator(object):
 			self.trajectory(state, observation_number, 
 							steps_per_observation, observation, *observation_args))
 		for i in range(samples - 1):
-			print(i)
+			print("Sample: " + str(i))
 			results += np.array(
 				self.trajectory(state, observation_number,
 								steps_per_observation, observation, *observation_args))
