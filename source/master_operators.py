@@ -16,7 +16,7 @@ class lindbladian(object):
 		self.hilbert_space_dimension = len(self.hamiltonian[0])
 		self._generate_matrix_representation()
 
-	def _hamiltonian_term(self):
+	def _hamiltonian_matrix(self):
 		"""Returns a dimensionless hamiltonian matrix.
 
 		Each component corresponds to a matrix in the choi 
@@ -31,7 +31,11 @@ class lindbladian(object):
 										 self.hamiltonian.T)
 		return hamiltonian_term
 
-	def _jump_term(self):
+	def _jump_term(self, index):
+		"""Provides the jump term matrix for the indexed operator."""
+		return np.kron(self.jump_operators[index], self.jump_operators[index].conjugate())
+
+	def _jump_matrix(self):
 		"""Returns a dimensionless jump group matrix.
 
 		Each term corresponds to a matrix in the choi 
@@ -42,11 +46,9 @@ class lindbladian(object):
 		"""
 		conjugated_jump_operators = np.conjugate(self.jump_operators)
 		jump_operator_number = len(conjugated_jump_operators)
-		jump_term = np.kron(self.jump_operators[0],
-							conjugated_jump_operators[0])
+		jump_term = self._jump_term(0)
 		for i in range(1, jump_operator_number):
-			jump_term += np.kron(self.jump_operators[i],
-								 conjugated_jump_operators[i])
+			jump_term += self._jump_term(i)
 		trace_preservation_term = np.tensordot(conjugated_jump_operators,
 											   self.jump_operators,
 											   axes = ([0, 1], [0, 1]))
@@ -73,10 +75,11 @@ class lindbladian(object):
 		self.matrix_representation = np.zeros((self.hilbert_space_dimension**2,
 											   self.hilbert_space_dimension**2), 
 											  dtype = complex)
-		self.matrix_representation += self._hamiltonian_term()
-		self.matrix_representation += self._jump_term()
+		self.matrix_representation += self._hamiltonian_matrix()
+		self.matrix_representation += self._jump_matrix()
 
 	def spectrum(self, return_number = None, extra_eigenvalues = 0, rounding = 10):
+		"""Diagonalized the Lindblad matrix and reshapes the eigenvectors."""
 		if return_number == None:
 			return_number = self.hilbert_space_dimension**2 + 1
 		eigenvalues, left_eigenvectors, right_eigenvectors = scipy.linalg.eig(
@@ -105,6 +108,17 @@ class lindbladian(object):
 		return (eigenvalues[0 : return_number + extra_eigenvalues], 
 				left_eigenmatrices[0 : return_number], 
 				right_eigenmatrices[0 : return_number])
+
+class activity_biased_lindbladian(lindbladian):
+	"""Constructs matrix representations of activity biased Lindbladians."""
+
+	def __init__(self, parameters):
+		super().__init__(parameters)
+		self.biases = parameters['biases'] * np.ones(len(self.jump_operators))
+
+	def _jump_term(self, index):
+		"""Provides the biased jump term matrix for the indexed operator."""
+		return self.biases[index] * super()._jump_term(index)
 
 class weakly_symmetric_lindbladian(object):
 

@@ -1,3 +1,7 @@
+"""This file contains the original code for the project, being reworked into clearer, more
+efficient code in the other source files."""
+
+
 import sys
 import time
 import numpy as np

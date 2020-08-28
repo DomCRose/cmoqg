@@ -10,6 +10,7 @@ import master_operators
 from scipy import linalg
 
 def pauli(label):
+	"""Returns the specified Pauli matrix."""
 	if label == 'z':
 		return np.array([[1.0, 0.0], [0.0, -1.0]])
 	elif label == 'x':
@@ -25,6 +26,7 @@ def pauli(label):
 						 "label given was {}".format(label))
 
 def local_operator(operator, index, sites):
+	"""Constructs a local operator based on the given operator for a particular site."""
 	identity = np.eye(len(operator))
 	if index == 1:
 		output = np.array(operator)
@@ -40,12 +42,14 @@ def local_operator(operator, index, sites):
 	return output
 
 def spatial_average(operator, sites):
+	"""Constructs an operator giving the spatial average of a local operators."""
 	observable = np.zeros((2**sites, 2**sites), dtype = complex)
 	for site in range(1, sites + 1):
 		observable += local_operator(operator, site, sites)
 	return observable/sites
 
 def local_operators(operator, sites):
+	"""Constructs local operators based on the given operator for each site."""
 	observables = []
 	for site in range(1, sites + 1):
 		observables.append(local_operator(operator, site, sites))
