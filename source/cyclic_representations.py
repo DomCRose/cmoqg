@@ -50,7 +50,7 @@ class spin_representation(object):
 		self.projectors = []
 		self.eigenspace_dimensions = []
 		for eigenspace in eigenspaces:
-			self.projectors.append(np.array(eigenspace))
+			self.projectors.append(np.array(eigenspace).T)
 			self.eigenspace_dimensions.append(len(eigenspace))
 
 	def eigenspace_pairs(self):
@@ -74,7 +74,18 @@ class spin_representation(object):
 		"""Produces blocks of operator along specified diagonal."""
 		blocks = []
 		for space_index in range(self.sites):
-			dual_space_index = (space_index + diagonal) % self.sites
-			blocks.append((self.projectors[space_index] @ operator 
-						   @ np.conjugate(self.projectors[dual_space_index]).T))
+			dual_space_index = (space_index - diagonal) % self.sites
+			blocks.append((np.conjugate(self.projectors[dual_space_index]).T
+						   @ operator 
+						   @ self.projectors[space_index]))
 		return blocks
+
+	def eigenvalue_matrix(self):
+		"""Returns the diagonalized unitary transformation as a matrix."""
+		U = np.zeros((2**self.sites, 2**self.sites), dtype = complex)
+		i = 0
+		for (espace, espace_dim) in enumerate(self.eigenspace_dimensions):
+			for j in range(espace_dim):
+				U[i, i] = np.exp(complex(2j*np.pi*espace) / self.sites)
+				i += 1
+		return U

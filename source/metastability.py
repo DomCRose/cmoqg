@@ -4,9 +4,6 @@ import itertools
 import numpy as np
 import random_linear_algebra as rla
 
-def hermitian_basis(left_eigenmatrices, right_eigenmatrices):
-	pass
-
 def simplex_vertices(left_eigenmatrices, mode = 'random', rotations = 3, 
 					 threshold = 0.05, right_eigenmatrices = None, 
 					 symmetry_transformation = None, power_for_identity = None):
@@ -210,8 +207,9 @@ def _simplex_vertices_cyclic(left_eigenmatrices, rotations,
 	"""Uses symmetries to calculate the best simplex vertices."""
 	if right_eigenmatrices == None:
 		raise ValueError("right_eigenmatrices must be provided in 'cyclic' mode.")
-	#if cyclic_transformation == None:
-	#	raise ValueError("cyclic_transformation must be specified in 'cyclic' mode.")
+	if np.ndim(cyclic_transformation) != 2:
+		raise ValueError("cyclic_transformation must be provided a matrix in 'cyclic'"
+						 + " mode.")
 	if power_for_identity == None:
 		raise ValueError("power_for_identity must be specified in 'cyclic' mode.")
 	number_of_vertices = len(left_eigenmatrices)

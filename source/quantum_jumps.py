@@ -5,6 +5,10 @@ class jump_trajectory_generator(object):
 
 	"""Generates quantum jump trajectories using a binary search.
 
+	See chapter 2 of the thesis at http://eprints.nottingham.ac.uk/56892/ 
+	for more details and the github repository at
+	https://github.com/everestbt/Quantum-Jump-Monte-Carlo-Adaptive-Algorithm
+	for another implementation.
 	"""
 
 	def __init__(self, lindbladian, smallest_time, evolver_number):

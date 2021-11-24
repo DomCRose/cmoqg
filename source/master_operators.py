@@ -5,10 +5,7 @@ import scipy.linalg
 
 class lindbladian(object):
 
-	"""Stores, applies and constructs Lindblad master operators.
-
-	
-	"""
+	"""Stores and constructs Lindblad master operators."""
 
 	def __init__(self, parameters):
 		self.hamiltonian = parameters['hamiltonian']
@@ -17,14 +14,7 @@ class lindbladian(object):
 		self._generate_matrix_representation()
 
 	def _hamiltonian_matrix(self):
-		"""Returns a dimensionless hamiltonian matrix.
-
-		Each component corresponds to a matrix in the choi 
-		representation of one of the dimensionless Hamiltonians 
-		defining the model. These can then be combined linearly with 
-		the desired dimensionful parametrization to get the matrix 
-		representation of the models full Lindblad operator.
-		"""
+		"""Returns the Hamiltonian commutator term of the Lindbladian."""
 		hamiltonian_term = -1j * np.kron(self.hamiltonian,
 										 np.eye(self.hilbert_space_dimension))
 		hamiltonian_term += 1j * np.kron(np.eye(self.hilbert_space_dimension),
@@ -36,14 +26,7 @@ class lindbladian(object):
 		return np.kron(self.jump_operators[index], self.jump_operators[index].conjugate())
 
 	def _jump_matrix(self):
-		"""Returns a dimensionless jump group matrix.
-
-		Each term corresponds to a matrix in the choi 
-		representation of one of the dimensionless jump operator groups
-		defining the model. These can then be combined linearly with 
-		the desired dimensionful parametrization to get the matrix 
-		representation of the models full Lindblad operator.
-		"""
+		"""Returns the jump term in the Lindbladian."""
 		conjugated_jump_operators = np.conjugate(self.jump_operators)
 		jump_operator_number = len(conjugated_jump_operators)
 		jump_term = self._jump_term(0)
@@ -58,20 +41,8 @@ class lindbladian(object):
 								 trace_preservation_term.T)
 		return jump_term
 
-	def action(self, matrix):
-		"""Applies the usual action of the Lindblad equation."""
-		return matrix
-
-	def adjoint_action(self, matrix):
-		"""Applies the adjoint action of the Lindblad equation."""
-		return matrix
-
 	def _generate_matrix_representation(self):
-		"""Constructs the matrix representation of the Lindblad operator.
-
-		When run for the first time, dimensionless components will be
-		saved for future updates if the program has been instructed to.
-		"""
+		"""Constructs the matrix representation of the Lindblad operator."""
 		self.matrix_representation = np.zeros((self.hilbert_space_dimension**2,
 											   self.hilbert_space_dimension**2), 
 											  dtype = complex)
@@ -81,7 +52,7 @@ class lindbladian(object):
 	def spectrum(self, return_number = None, extra_eigenvalues = 0, rounding = 10):
 		"""Diagonalized the Lindblad matrix and reshapes the eigenvectors."""
 		if return_number == None:
-			return_number = self.hilbert_space_dimension**2 + 1
+			return_number = self.hilbert_space_dimension**2
 		eigenvalues, left_eigenvectors, right_eigenvectors = scipy.linalg.eig(
 			self.matrix_representation, left = True)
 		sorting_index = eigenvalues.argsort()[::-1]
@@ -118,125 +89,94 @@ class activity_biased_lindbladian(lindbladian):
 
 	def _jump_term(self, index):
 		"""Provides the biased jump term matrix for the indexed operator."""
-		return self.biases[index] * super()._jump_term(index)
+		return np.exp(-self.biases[index]) * super()._jump_term(index)
 
 class weakly_symmetric_lindbladian(object):
 
-	"""Stores, applies and constructs weakly symmetric Lindbladians.
+	"""Stores and constructs weakly symmetric Lindbladians.
 
 	Only set up for systems with a single weak symmetry. The jump 
 	operators are required to be in a form respecting the weak 
 	symmetry, see chapter 3 of the thesis at
-	http://eprints.nottingham.ac.uk/56892/ or the paper [REF], input
-	as sets of blocks. The Hamiltonian must have also been block 
-	diagonalized.
-
-	Parameters
-	----------
-	hamiltonians : list of 2d arrays
-		The Hamiltonian components, each consisting of a list of their
-		symmetry eigenspace blocks.
-	jump_operators : list of lists of 2d arrays
-		The jump operators, grouped in lists which share parameters. 
-		Each jump operator is represented by a list of their symmetry 
-		eigenspace blocks.
-	jump_operator_mappings : list of lists of integers
-		Indexes which prescribe which eigenspace each block of each
-		jump operator maps too. The eigenspace they map from is
-		prescribed by their order. Must have same shape as
-		jump_operators bar the last two indices.
-	eigenspace_number : integer
-		The number of unique eigenvalues possessed by the symmetry.
-	eigenspace_pairs : list of list of integers
-		For each block of the Lindbladian, the index of the eigenspace
-		to which each eigenspace corresponding to the list index is 
-		paired.
-	eigenspace_dimensions : list of integers
-		The Hilbert space dimension of each symmetry eigenspace.
-	current_parameters : list of list of floats, optional
-		The coefficients used with each component when combined to
-		construct the full Lindbladian.
-	save_component : list of list of lists of booleans
-		Determines whether each component is saved for fast iteraction
-		over parameters, with a choice of whether to save only 
-		particular eigenspaces of interest.
+	http://eprints.nottingham.ac.uk/56892/ or the paper 
+	[Phys. Rev. A 103, 042204 (2021)], input as sets of blocks. The 
+	Hamiltonian must have also been block diagonalized. These blocks 
+	are assumed to be ordered according to the eigenspace of the
+	symmetry it acts on, i.e. if a block acts on the first
+	eigenspace of the symmetry, it occurs first in the list of blocks.
 	"""
 
 	def __init__(self, parameters):
 		self.hamiltonian = parameters['hamiltonians']
 		self.jump_operators = parameters['jump_operators']
+		self.jump_operator_eigenvalues = parameters['jump_operator_eigenvalues']
 		self.eigenspace_pairs = parameters['eigenspace_pairs']
 		self.eigenspace_dimensions = parameters['eigenspace_dimensions']
+		self.symmetry_rep = parameters['symmetry_rep']
 		self.eigenspace_number = len(self.eigenspace_dimensions)
+		self.hilbert_space_dimension = sum(self.eigenspace_dimensions)
 		self._generate_matrix_representation()
 
 	def _hamiltonian_term(self, block_index):
-		"""Returns a dimensionless hamiltonian matrix.
-
-		Each component corresponds to a matrix in the choi 
-		representation of one of the dimensionless Hamiltonians 
-		defining the model. These can then be combined linearly with 
-		the desired dimensionful parametrization to get the matrix 
-		representation of the models full Lindblad operator.
-		"""
-		pair_index = self.eigenspace_pairs[block_index][0]
-		hamiltonian_term = -1j * np.kron(
-			self.hamiltonian[0], np.eye(self.eigenspace_dimensions[pair_index]))
-		hamiltonian_term += 1j * np.kron(
-			np.eye(self.eigenspace_dimensions[pair_index]), self.hamiltonian[0].T)
-		print(hamiltonian_term.shape)
-		for symmetry_index in range(1, self.eigenspace_number):
-			pair_index = self.eigenspace_pairs[block_index][symmetry_index]
-			print(self.hamiltonian[symmetry_index].shape)
-			print(np.eye(self.eigenspace_dimensions[pair_index]).shape)
-			hamiltonian_term += -1j * np.kron(
-				self.hamiltonian[symmetry_index], 
-				np.eye(self.eigenspace_dimensions[pair_index]))
-			hamiltonian_term += 1j * np.kron(
-				np.eye(self.eigenspace_dimensions[pair_index]),
-				self.hamiltonian[symmetry_index].T)
-		return hamiltonian_term
-
-	def _jump_term(self, block_index):
-		"""Returns a dimensionless jump group matrix.
-
-		Each component corresponds to a matrix in the choi 
-		representation of one of the dimensionless jump operator groups
-		defining the model. These can then be combined linearly with 
-		the desired dimensionful parametrization to get the matrix 
-		representation of the models full Lindblad operator.
-		"""
-		conjugated_jump_operators = np.conjugate(self.jump_operators)
-		jump_operator_number = len(conjugated_jump_operators)
-		pair_index = self.eigenspace_pairs[block_index][0]
-		block_dimension = (self.eigenspace_dimensions[0] 
-						   * self.eigenspace_dimensions[pair_index])
-		jump_component = np.zeros((block_dimension, block_dimension),
-								  dtype = complex)
-		trace_preservation_term = np.einsum('ijkl,ijkm->jlm',
-											conjugated_jump_operators,
-											self.jump_operators)
+		"""Returns a block of the Hamiltonian commutator term in the Lindbladian."""
+		hamiltonian_term_blocks = []
 		for symmetry_index in range(self.eigenspace_number):
 			pair_index = self.eigenspace_pairs[block_index][symmetry_index]
-			for i in range(jump_operator_number):
-				jump_component += np.kron(
-					self.jump_operators[i][symmetry_index],
-					conjugated_jump_operators[i][pair_index])
-			jump_component -= 0.5*np.kron(
-				trace_preservation_term[symmetry_index],
-				np.eye(self.eigenspace_dimensions[pair_index]))
-			jump_component -= 0.5*np.kron(
+			hamiltonian_term_blocks.append(-1j * np.kron(
+				self.hamiltonian[symmetry_index], 
+				np.eye(self.eigenspace_dimensions[pair_index])))
+			hamiltonian_term_blocks[-1] += 1j * np.kron(
 				np.eye(self.eigenspace_dimensions[symmetry_index]),
-				trace_preservation_term[pair_index].T)
-		return jump_component
+				self.hamiltonian[pair_index].T)
+		hamiltonian_term = scipy.linalg.block_diag(*hamiltonian_term_blocks)
+		return hamiltonian_term
 
-	def action(self, matrix):
-		"""Applies the usual action of the Lindblad equation."""
-		return matrix
+	def _normalization_term(self, block_index):
+		"""Returns a block of the anti-commutator term in the Lindbladian."""
+		conjugated_jumps = np.conjugate(self.jump_operators)
+		jump_products = [np.zeros((self.eigenspace_dimensions[i],
+								   self.eigenspace_dimensions[i]), dtype = complex) 
+						 for i in range(self.eigenspace_number)]
+		for jump_index in range(len(self.jump_operators)):
+			for symmetry_index in range(self.eigenspace_number):
+				jump_products[symmetry_index] += (
+					conjugated_jumps[jump_index][symmetry_index].T 
+					@ self.jump_operators[jump_index][symmetry_index])
+		normalization_term_blocks = []
+		for symmetry_index in range(self.eigenspace_number):
+			pair_index = self.eigenspace_pairs[block_index][symmetry_index]
+			normalization_term_blocks.append(-0.5 * np.kron(
+				jump_products[symmetry_index], 
+				np.eye(self.eigenspace_dimensions[pair_index])))
+			normalization_term_blocks[-1] -= 0.5 * np.kron(
+				np.eye(self.eigenspace_dimensions[symmetry_index]),
+				jump_products[pair_index].T)
+		normalization_term = scipy.linalg.block_diag(*normalization_term_blocks)
+		return normalization_term
 
-	def adjoint_action(self, matrix):
-		"""Applies the adjoint action of the Lindblad equation."""
-		return matrix
+
+	def _jump_term(self, block_index):
+		"""Returns a block of the jump term in the Lindbladian."""
+		adjoint_eigenspace_dimensions = []
+		for eigenspace_index in range(self.eigenspace_number):
+			pair_index = self.eigenspace_pairs[block_index][eigenspace_index]
+			adjoint_eigenspace_dimensions.append(
+				self.eigenspace_dimensions[eigenspace_index] 
+				* self.eigenspace_dimensions[pair_index])
+		jump_term = [[np.zeros((adjoint_eigenspace_dimensions[i],
+								adjoint_eigenspace_dimensions[j]), dtype = complex) 
+					  for j in range(self.eigenspace_number)]
+					 for i in range(self.eigenspace_number)]
+		conjugated_jump_operators = np.conjugate(self.jump_operators)
+		for jump_index in range(len(self.jump_operators)):
+			for symmetry_index in range(self.eigenspace_number):
+				pair_index = self.eigenspace_pairs[block_index][symmetry_index]
+				jump_term[(symmetry_index 
+						   - self.jump_operator_eigenvalues[jump_index]) 
+						  % self.eigenspace_number][symmetry_index] += np.kron(
+					self.jump_operators[jump_index][symmetry_index],
+					conjugated_jump_operators[jump_index][pair_index])
+		return np.block(jump_term)
 
 	def _generate_matrix_representation(self):
 		"""Constructs the matrix representation of the Lindblad operator.
@@ -244,13 +184,74 @@ class weakly_symmetric_lindbladian(object):
 		When run for the first time, dimensionless components will be
 		saved for future updates if the program has been instructed to.
 		"""
+		print(self.eigenspace_pairs)
 		self.matrix_representation = []
 		for block_index in range(self.eigenspace_number):
-			pair_index = self.eigenspace_pairs[block_index][0]
-			print(pair_index)
-			block_dimension = (self.eigenspace_dimensions[0] 
-							   * self.eigenspace_dimensions[pair_index])
+			block_dimension = 0
+			for eigenspace_index in range(self.eigenspace_number):
+				pair_index = self.eigenspace_pairs[block_index][eigenspace_index]
+				block_dimension += (self.eigenspace_dimensions[eigenspace_index] 
+								* self.eigenspace_dimensions[pair_index])
 			self.matrix_representation.append(np.zeros((block_dimension, block_dimension),
 											  dtype = complex))
 			self.matrix_representation[-1] += self._hamiltonian_term(block_index)
+			self.matrix_representation[-1] += self._normalization_term(block_index)
 			self.matrix_representation[-1] += self._jump_term(block_index)
+
+	def _matrix_embedding(self, vectors, matrix_eigenspace):
+		"""Embeds a symmetric eigenvector in the full matrix hilbert space."""
+		eigenspace_pairs = self.eigenspace_pairs[matrix_eigenspace]
+		matrices = []
+		for vector in vectors:
+			matrix = [[np.zeros((self.eigenspace_dimensions[i], 
+								 self.eigenspace_dimensions[j]), dtype = complex)
+					   for j in range(self.eigenspace_number)] 
+					  for i in range(self.eigenspace_number)]
+			vblock_start = 0
+			vblock_end = 0
+			for left, right in enumerate(eigenspace_pairs):
+				vblock_start = vblock_end
+				vblock_end += (self.eigenspace_dimensions[left]
+							   * self.eigenspace_dimensions[right])
+				matrix[left][right] += np.reshape(
+					vector[vblock_start:vblock_end],
+					(self.eigenspace_dimensions[left], self.eigenspace_dimensions[right]))
+			matrices.append(np.block(matrix))
+		return matrices
+
+	def spectrum(self, return_number = None, extra_eigenvalues = 0, rounding = 10):
+		"""Diagonalized the Lindblad matrix and reshapes the eigenvectors."""
+		if return_number == None:
+			return_number = self.hilbert_space_dimension**2
+		eigenvalues = []
+		left_eigenmatrices = []
+		right_eigenmatrices = []
+		symmetry_indices = []
+		for sym_ind in range(self.eigenspace_number):
+			evals, left_eigenvectors, right_eigenvectors = scipy.linalg.eig(
+				self.matrix_representation[sym_ind], left = True)
+			sorting_index = evals.argsort()[::-1]
+			evals = np.around(evals[sorting_index], rounding)[0:return_number]
+			left_evecs = left_eigenvectors[:, sorting_index].T[0:return_number]
+			right_evecs = right_eigenvectors[:, sorting_index].T[0:return_number]
+			left_emats = self._matrix_embedding(left_evecs, sym_ind)
+			right_emats = self._matrix_embedding(right_evecs, sym_ind)
+			if sym_ind == 0:
+				print(np.trace(right_emats[0]))
+				right_emats[0] = right_emats[0] / np.trace(right_emats[0])
+			norm_factor = 1/np.einsum("ikj,ikj->i", np.conjugate(left_emats), right_emats)
+			left_emats = np.einsum("ijk,i->ijk", left_emats, np.conjugate(norm_factor))
+			left_emats = np.around(left_emats, rounding)
+			right_emats = np.around(right_emats, rounding)
+			eigenvalues.extend(evals)
+			left_eigenmatrices.extend(left_emats)
+			right_eigenmatrices.extend(right_emats)
+			symmetry_indices.extend([sym_ind for i in range(return_number)])
+		sorting_index = np.array(eigenvalues).argsort()[::-1]
+		eigenvalues = np.array(eigenvalues)[sorting_index]
+		left_eigenmatrices = np.array(left_eigenmatrices)[sorting_index][0:return_number]
+		right_eigenmatrices = np.array(right_eigenmatrices)[sorting_index][
+																		0:return_number]
+		symmetry_indices = np.array(symmetry_indices)[sorting_index][0:return_number]
+		return (eigenvalues[0 : return_number + extra_eigenvalues], 
+				left_eigenmatrices, right_eigenmatrices, symmetry_indices)
